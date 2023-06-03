@@ -1,7 +1,7 @@
 #!/bin/bash
 
-KERNEL_VERSION=6.3.5
-KERNEL_SOURCE_URL=https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.3.5.tar.xz
+KERNEL_VERSION=5.10.181
+KERNEL_SOURCE_URL=https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.10.181.tar.xz
 KERNEL_SOURCE_NAME=linux-$KERNEL_VERSION
 BUILD_ROOT_DIRECTORY=$(pwd)
 KERNEL_SOURCE_FOLDER=$BUILD_ROOT_DIRECTORY/linux-$KERNEL_VERSION
@@ -11,7 +11,7 @@ HEADERS_FOLDER=$KERNEL_SOURCE_FOLDER/headers
 KERNEL_CONFIG=$BUILD_ROOT_DIRECTORY/kernel.conf
 DRACUT_CONFIG=$BUILD_ROOT_DIRECTORY/dracut.conf
 DRACUT_CONFIG_DIR=$BUILD_ROOT_DIRECTORY/dracut.conf.d
-INITRAMFS_NAME=initramfs.cpio.zst
+INITRAMFS_NAME=initramfs.cpio.xz
 
 # Exit on errors
 set -e
