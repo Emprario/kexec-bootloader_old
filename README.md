@@ -1,2 +1,2 @@
-# eupnea-bootloader
+# depthloader
 Bootloader for Depthboot, using kexec. 
