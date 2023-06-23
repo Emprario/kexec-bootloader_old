@@ -1,5 +1,8 @@
-INITRAMFS_PATH=$1
-INIT_SCRIPT=$2
+BUILD_PATH=$(pwd)
+INITRAMFS_PATH=$BUILD_PATH/initramfs
+INIT_SCRIPT=$BUILD_PATH/init
+MODULES=$BUILD_PATH/modules.tar.xz
+
 
 # make a clean image
 rm -rf $INITRAMFS_PATH
@@ -7,7 +10,7 @@ mkdir $INITRAMFS_PATH
 
 # Create basic root
 cd $INITRAMFS_PATH
-mkdir --parents ./{bin,dev,etc,lib,lib64,mnt/root,proc,root,sbin,sys}
+mkdir --parents ./{usr,bin,dev,etc,lib,lib64,mnt/root,proc,root,sbin,sys}
 mknod -m 622 dev/console c 5 1
 mknod -m 622 dev/tty0 c 4 1
 cp $INIT_SCRIPT .
@@ -30,5 +33,11 @@ ln -s busybox touch
 ln -s busybox vi
 cd ..
 
+# extract modules to /lib/module
+mkdir lib/modules
+cd usr; ln -s ../lib; cd .. # au cas où
+tar xpf $MODULES -C lib/modules
+
 # compile cpio archive
-find . | cpio -ov --format=newc >../initramfz
+rm ../initramfs.cpio
+find . | cpio -ov --format=newc >../initramfs.cpio

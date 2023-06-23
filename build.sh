@@ -243,7 +243,7 @@ create_initramfs() {
   write_output "Building initramfs" "blue"
   echo -e "\n"
 
-  bash initramfs.sh $BUILD_ROOT_PATH
+  bash mkinitramfs.sh 
 
   # copy initramfs to build root for the GitHub release
   #cp $INITRAMFS_NAME $BUILD_ROOT_DIRECTORY/$INITRAMFS_NAME
