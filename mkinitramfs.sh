@@ -13,6 +13,7 @@ cd $INITRAMFS_PATH
 mkdir --parents ./{usr,bin,dev,etc,lib,lib64,mnt/root,proc,root,sbin,sys}
 mknod -m 622 dev/console c 5 1
 mknod -m 622 dev/tty0 c 4 1
+mknod -m 622 dev/ttyS0 c 4 64
 cp $INIT_SCRIPT .
 
 # add some binaries with busybox
