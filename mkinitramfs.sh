@@ -30,6 +30,7 @@ ln -s busybox ls
 ln -s busybox mkdir
 ln -s busybox mount
 ln -s busybox modprobe
+ln -s busybox depmod
 ln -s busybox rm
 ln -s busybox rmdir
 ln -s busybox sh
