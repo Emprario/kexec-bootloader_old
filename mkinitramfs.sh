@@ -3,6 +3,7 @@ INITRAMFS_PATH=$BUILD_PATH/initramfs
 INIT_SCRIPT=$BUILD_PATH/init
 MODULES=$BUILD_PATH/modules.tar.xz
 CPIO_ARCHIVE=initramfs.cpio
+MOD_D=$BUILD_PATH/mod.cfg
 
 # make a clean image
 rm -rf $INITRAMFS_PATH
@@ -30,7 +31,7 @@ ln -s busybox ls
 ln -s busybox mkdir
 ln -s busybox mount
 ln -s busybox modprobe
-ln -s busybox depmod
+ln -s busybox insmod 
 ln -s busybox rm
 ln -s busybox rmdir
 ln -s busybox sh
@@ -40,9 +41,12 @@ ln -s busybox vi
 cd ..
 
 # extract modules to /lib/module
-mkdir lib/modules
+mkdir ./lib/modules
 cd usr; ln -s ../lib; cd .. # au cas où
 tar xpf $MODULES -C lib/modules
+
+# add mod.cfg to the initramfs
+cp  $MOD_D ./etc/mod.cfg 
 
 # compile cpio archive
 rm ../$CPIO_ARCHIVE
