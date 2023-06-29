@@ -279,6 +279,7 @@ user_input() {
 }
 
 #get_kernel_source
+cp $BUILD_ROOT_DIRECTORY/kernel.conf $KERNEL_SOURCE_FOLDER/.config
 apply_kernel_patches
 setup_kernel_config
 
