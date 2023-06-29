@@ -4,6 +4,7 @@ INIT_SCRIPT=$BUILD_PATH/init
 MODULES=$BUILD_PATH/modules.tar.xz
 CPIO_ARCHIVE=initramfs.cpio
 MOD_D=$BUILD_PATH/mod.cfg
+LINUX_FIRMWARE=https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-20230625.tar.xz
 
 # make a clean image
 rm -rf $INITRAMFS_PATH
@@ -11,7 +12,7 @@ mkdir $INITRAMFS_PATH
 
 # Create basic root
 cd $INITRAMFS_PATH
-mkdir --parents ./{usr,bin,dev,etc,lib,lib64,mnt/root,proc,root,sbin,sys}
+mkdir --parents ./{usr,bin,dev,etc,lib,lib64,mnt/root,proc,root,sbin,sys,tmp}
 mknod -m 622 dev/console c 5 1
 mknod -m 622 dev/tty0 c 4 1
 mknod -m 622 dev/ttyS0 c 4 64
@@ -40,13 +41,24 @@ ln -s busybox tty
 ln -s busybox vi
 cd ..
 
-# extract modules to /lib/module
+# extract modules to /lib/modules
 mkdir ./lib/modules
 cd usr; ln -s ../lib; cd .. # au cas où
 tar xpf $MODULES -C lib/modules
 
+# extract firmware blob needed
+mkdir ./lib/firmware
+cp -r /lib/firmware/amdgpu ./lib/firmware
+
+
+#rm -rf /tmp/linux-firmware*
+#curl $LINUX_FIRMWARE -Lo /tmp/linux-firmware.tar.xz
+#tar xpf /tmp/linux-firmware.tar.xz -C /tmp
+#mkdir ./lib/firmware
+#cp -r /tmp/linux-firmware-*/* ./lib/firmware 
+
 # add mod.cfg to the initramfs
-cp  $MOD_D ./etc/mod.cfg 
+#cp  $MOD_D ./etc/mod.cfg 
 
 # compile cpio archive
 rm ../$CPIO_ARCHIVE
