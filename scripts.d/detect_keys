@@ -1,0 +1,18 @@
+# Read a single character from the keyboard
+while true; do
+    read -s -n 1 key
+    case "$key" in
+        $'\x1b') # Check if the key is an escape sequence
+            read -s -n 2 -t 1 seq # read in busybox only accept entire values (time)
+            case "$seq" in
+                '[A') echo "Up arrow pressed" ;;
+                '[B') echo "Down arrow pressed" ;;
+                '[C') echo "Right arrow pressed" ;;
+                '[D') echo "Left arrow pressed" ;;
+            esac
+            ;;
+        '') echo "Enter key pressed" ;; # Handle Enter key
+	'c') echo "Cancel operation; " && exit ;; # Stop process
+        *) echo "Key pressed: $key" ;; # Handle other keys
+    esac
+done
