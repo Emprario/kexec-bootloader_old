@@ -40,5 +40,5 @@ get_scan() {
   done
   echo "Options detected: ${#OPTIONS[*]}"
   echo ${OPTIONS[*]}
-  return OPTIONS
+  return ${OPTIONS[*]}
 }
