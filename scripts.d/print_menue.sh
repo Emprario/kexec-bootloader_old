@@ -16,7 +16,7 @@ read_key () {
     #'c') echo "Cancel operation; " && exit ;; # Stop process
     *) OP="$key" ;; # Handle other keys
   esac
-  echo $OP
+  echo "$OP"
 }
 : 
 selection () {
@@ -24,15 +24,19 @@ selection () {
   clear
   SEL=0
   OLD=-1
-  ENTER="true" # bool values = hell
-  while true; do
+  ENTER=0 # bool values = hell
+  while [ $ENTER -eq 0 ]; do
     if [ $OLD -ne $SEL ]; then
       OLD=$SEL
       clear
       cc=0
       echo "$1"
       for option in $2; do
-        echo "  $option"
+        if [ $cc -eq $SEL ];then
+          echo " * $option"
+        else
+          echo "   $option"
+        fi
         cc=$(( $cc+1 ))
       done
     fi
@@ -40,7 +44,7 @@ selection () {
     case "$OP" in
       'UP') SEL=$(( $SEL-1 )) ;;
       'DOWN') SEL=$(( $SEL+1 )) ;;
-      'ENTER') ENTER="true" ;;
+      'ENTER') ENTER=1 ;;
     esac
     if [ $SEL -lt 0 ];then
       SEL=0
@@ -49,6 +53,8 @@ selection () {
       SEL=$(( $cc-1 ))
     fi
   done
+  return $SEL
 }
 
-selection "Bonjour !" "eupnea kboot"
+#selection "Bonjour !" "eupnea kboot"
+#echo "return value: $?"

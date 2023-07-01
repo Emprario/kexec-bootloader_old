@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ -f "/lib/scripts" ];then
+  scrPATH="/lib/scripts"
+else
+  srcPATH="."
+fi
+
+# '.' is equivalent to the good old 'source' in bash
+. $srcPATH/print_menue.sh
+. $srcPATH/scan_boot.sh
+
+get_scan
+
+
