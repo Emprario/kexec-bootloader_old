@@ -1,17 +1,15 @@
 #!/bin/bash
 
-KERNEL_VERSION=5.10.181
-KERNEL_SOURCE_URL=https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.10.181.tar.xz
+KERNEL_VERSION=6.3.4
+KERNEL_SOURCE_URL=https://cdn.kernel.org/pub/linux/kernel/v${KERNEL_VERSION::1}.x/linux-$KERNEL_VERSION.tar.xz
 KERNEL_SOURCE_NAME=linux-$KERNEL_VERSION
 BUILD_ROOT_DIRECTORY=$(pwd)
 KERNEL_SOURCE_FOLDER=$BUILD_ROOT_DIRECTORY/linux-$KERNEL_VERSION
 KERNEL_PATCHES=$BUILD_ROOT_DIRECTORY/patches
 MODULES_FOLDER=$KERNEL_SOURCE_FOLDER/modules
-HEADERS_FOLDER=$KERNEL_SOURCE_FOLDER/headers
+#HEADERS_FOLDER=$KERNEL_SOURCE_FOLDER/headers
 KERNEL_CONFIG=$BUILD_ROOT_DIRECTORY/kernel.conf
-DRACUT_CONFIG=$BUILD_ROOT_DIRECTORY/dracut.conf
-DRACUT_CONFIG_DIR=$BUILD_ROOT_DIRECTORY/dracut.conf.d
-INITRAMFS_NAME=initramfs.cpio.xz
+INITRAMFS_NAME=initramfs.cpio
 
 # Exit on errors
 set -e
@@ -241,18 +239,16 @@ edit_kernel_config() {
 
 #uses dracut to generate initramfs
 create_initramfs() {
-  cd $KERNEL_SOURCE_FOLDER
+  cd $BUILD_ROOT_DIRECTORY
 
   write_output "Building initramfs" "blue"
   echo -e "\n"
   # Generate initramfs from the built modules
-  # when --confdir is not set dracut will use the systems config -> create empty folder to prevent dracut from using the systems config
-  if [[ ! -d $DRACUT_CONFIG_DIR ]]; then
-      mkdir $DRACUT_CONFIG_DIR
-  fi 
-  dracut -c $DRACUT_CONFIG --confdir $DRACUT_CONFIG_DIR $INITRAMFS_NAME --kver $KVER --kmoddir "$MODULES_FOLDER/lib/modules/$KVER" --force
+  
+  sudo bash mkinitramfs.sh
+
   # copy initramfs to build root for the GitHub release
-  cp $INITRAMFS_NAME $BUILD_ROOT_DIRECTORY/$INITRAMFS_NAME
+  cp $INITRAMFS_NAME $KERNEL_SOURCE_FOLDER/$INITRAMFS_NAME
   write_output "Building kernel with initramfs" "blue"
   echo -e "\n"
   build_kernel 0
@@ -283,6 +279,7 @@ user_input() {
 }
 
 #get_kernel_source
+cp $BUILD_ROOT_DIRECTORY/kernel.conf $KERNEL_SOURCE_FOLDER/.config
 apply_kernel_patches
 setup_kernel_config
 
@@ -294,7 +291,7 @@ else
 fi
 
 install_modules
-install_headers
+#install_headers
 create_initramfs
 
 # Copy kernel to root
