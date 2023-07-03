@@ -1,7 +1,8 @@
 #!/bin/sh
 
-if [ -f "/lib/scripts" ];then
-  scrPATH="/lib/scripts"
+
+if [ -d "/lib/scripts/" ];then
+  srcPATH="/lib/scripts"
 else
   srcPATH="."
 fi
@@ -10,6 +11,11 @@ fi
 . $srcPATH/print_menue.sh
 . $srcPATH/scan_boot.sh
 
-get_scan
+get_scan # return $OPTIONS
 
-
+OPTIONS_useNAME=""
+for option in $OPTIONS
+do
+  OPTIONS_useNAME="$(echo $option | cut -f4 -d"/")_on_/dev/$(echo $option | cut -f3 -d"/") $OPTIONS_useNAME"
+done
+selection "Selection:" "$OPTIONS_useNAME"
