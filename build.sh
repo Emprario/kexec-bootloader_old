@@ -3,45 +3,39 @@
 KERNEL_VERSION=6.3.4
 KERNEL_SOURCE_URL=https://cdn.kernel.org/pub/linux/kernel/v${KERNEL_VERSION::1}.x/linux-$KERNEL_VERSION.tar.xz
 KERNEL_SOURCE_NAME=linux-$KERNEL_VERSION
-BUILD_ROOT_DIRECTORY=$(pwd)
-KERNEL_SOURCE_FOLDER=$BUILD_ROOT_DIRECTORY/linux-$KERNEL_VERSION
-KERNEL_PATCHES=$BUILD_ROOT_DIRECTORY/patches
-MODULES_FOLDER=$KERNEL_SOURCE_FOLDER/modules
-#HEADERS_FOLDER=$KERNEL_SOURCE_FOLDER/headers
-KERNEL_CONFIG=$BUILD_ROOT_DIRECTORY/kernel.conf
+BRD=$(pwd) # BUILD_ROOT_DIRECTORY
+KSF=$BRD/linux-$KERNEL_VERSION # KERNEL_SOURCE_FOLDER
+MODULES_FOLDER=$KSF/modules
+KERNEL_CONFIG=$BRD/kernel.conf
 INITRAMFS_NAME=initramfs.cpio
 
 # Exit on errors
 set -e
 
-#outputs given message and color choice
-#First parameter is message to output
-#Second parameter is color choice
-write_output() {
-  case ${2,,} in
-  green) # user question
-    printf "\e[32m$1\e[0m"
-    ;;
-  yellow) # non-critical error / warning
-    printf "\e[33m$1\e[0m"
-    ;;
-  red) # critical error -> script will exit
-    printf "\e[31m$1\e[0m"
-    ;;
-  blue) # status update
-    printf "\e[34m$1\e[0m"
-    ;;
-  magenta)
-    printf "\e[35m$1\e[0m"
-    ;;
-  white)
-    printf "\e[37m$1\e[0m"
-    ;;
-  *)
-    printf "$1"
-    ;;
-  esac
+infop () { # status update
+  printf "\e[34m$1\e[0m \n"
 }
+
+ask () { # user question
+  printf "\e[32m$1\e[0m" # Question answer should follow question
+}
+
+warning () { # non-critical error / warning
+  printf "\e[33m$1\e[0m \n"
+}
+
+error () { # critical error -> script will exit
+  printf "\e[31m$1\e[0m \n"
+}
+
+
+#    ### Guidlines ###
+# * Each function should use cd to point the directory it supposed to be.
+
+
+
+
+
 
 #Checks if source files already exist
 #If not then tries to download tarball with curl
@@ -49,51 +43,19 @@ write_output() {
 #if download is successful then extracts tarball
 get_kernel_source() {
   if [[ ! -d $KERNEL_SOURCE_FOLDER ]]; then
-    write_output "Downloading kernel source" "blue"
+    infop "Downloading kernel source"
     echo -e "\n"
     if ! curl $KERNEL_SOURCE_URL -o $KERNEL_SOURCE_NAME.tar.xz; then
-      write_output "Failed to download kernel using curl, trying wget" "yellow"
-      echo -e "\n"
-      if ! wget $KERNEL_SOURCE_URL; then
-        write_output "Failed to download using wget, check network connection." "red"
-        echo
-        exit 1
-      fi
+      error "Failed to download using curl, check you own curl, check network connection."
+      exit 1
     fi
-    if ! tar -xf $KERNEL_SOURCE_FOLDER.tar.xz; then
-      write_output "Failed to extract kernel" "red"
-      echo
+    if ! tar -xf $KERNEL_SOURCE_NAME.tar.xz; then
+      error "Failed to extract kernel"
       exit 1
     fi
 
   else
-    write_output "Kernel already cloned!" "yellow"
-    echo -e "\n"
-  fi
-
-}
-
-#Applies kernel patches stored in $KERNEL_PATCHES
-#creates an empty .patches_applied file if patches have already been applied
-apply_kernel_patches() {
-  cd $KERNEL_SOURCE_FOLDER
-  if [[ ! -f "$BUILD_ROOT_DIRECTORY/.patches_applied" ]]; then
-    write_output "Applying kernel patches." "blue"
-    echo
-    echo -e "\e[33m"
-    for file in $(ls $KERNEL_PATCHES); do
-
-      if ! patch -p1 <$KERNEL_PATCHES/$file; then
-        write_output "Failed to apply patch $file." "red"
-        echo
-        exit 1
-      fi
-    done
-    echo -e "\e[0m"
-    touch $BUILD_ROOT_DIRECTORY/.patches_applied
-  else
-    write_output "Kernel patches already applied!" "yellow"
-    echo
+    warning "Kernel already cloned!"
   fi
 }
 
@@ -102,56 +64,55 @@ apply_kernel_patches() {
 #Runs make olddefconfig to ensure no missing new options are left out of file
 #Creates empty initramfs file so kernel will build
 setup_kernel_config() {
+  cd $KSF
+  
   if [[ ! -f ".config" ]]; then
-    write_output "No existing kernel config, creating config file" "yellow"
+    warning "No existing kernel config, creating config file"
     echo
-    cp $KERNEL_CONFIG $KERNEL_SOURCE_FOLDER/.config
+    cp $KERNEL_CONFIG $KSF/.config
   else
-    write_output "Kernel config already exists" "blue"
-    echo -e "\n"
+    infop "Kernel config already exists"
   fi
 
-  write_output "Running make olddefconfig" "blue"
-  echo -e "\n"
+  infop "Running make olddefconfig"
   make olddefconfig
-  touch $KERNEL_SOURCE_FOLDER/$INITRAMFS_NAME
+  touch $KSF/$INITRAMFS_NAME # Prevent kernel building errors
 }
 
-#Builds clean kernel if 1, builds from previous build if 0
+#Builds clean kernel if "clean" argument is passed
 build_kernel() {
-  cd $KERNEL_SOURCE_FOLDER
-  if [[ $1 -eq 0 ]]; then
-    write_output "Building using existing build" "blue"
-    echo
-    if ! make -j"$(nproc)"; then
-      write_output "Kernel build failed." "red"
-      echo
-      exit 1
-    else
-      write_output "Kernel build completed" "blue"
-      echo -e "\n"
-    fi
-  else
-    write_output "Building clean kernel" "blue"
-    echo
+  cd $KSF
+  
+  if [[ $1 == "clean" ]]; then
+    infop "Clean Kernel source"
     make clean
-    if ! make -j"$(nproc)"; then
-      write_output "Kernel build failed." "red"
-      echo
-      exit 1
-    else
-      write_output "Kernel build completed" "blue"
-      echo -e "\n"
-    fi
+  fi
+  
+  infop "Building Kernel"
+  if ! make -j"$(nproc)"; then
+    error "Kernel build failed."
+    exit 1
+  else
+    infop "Kernel build completed"
   fi
   #Version of kernel
-  KVER=$(file -bL arch/x86/boot/bzImage | grep -o 'version [^ ]*' | cut -d ' ' -f 2)
+  KERNEL_STRING=$(file -bL arch/x86/boot/bzImage | grep -o 'version [^ ]*' | cut -d ' ' -f 2)
 }
 
 #Installs kernel modules to $MODULES_FOLDER
 install_modules() {
-  # Create empty headers folder
-  sudo rm -rf $MODULES_FOLDER
+  cd $KSF
+
+  if [  if [[ $(id -u) -eq 0 ]]; then
+    error "This Function should be run as root"
+    exit 1
+  fi[ $(id -u) -eq 0 ]]; then
+    error "This Function should be run as root"
+    exit 1
+  fi
+
+  # Create empty module folder
+  rm -rf $MODULES_FOLDER
   mkdir $MODULES_FOLDER
 
   make -j"$(nproc)" modules_install INSTALL_MOD_PATH=$MODULES_FOLDER INSTALL_MOD_STRIP=1
@@ -162,103 +123,45 @@ install_modules() {
   rm -rf */source
 
   # Create an archive for the modules
-  tar -cvI "xz -9 -T0" -f $BUILD_ROOT_DIRECTORY/modules.tar.xz *
-  write_output "Modules archive created." "blue"
-
+  tar -cvI "xz -9 -T0" -f $BRD/modules.tar.xz *
+  infop "Modules archive created."
 }
 
-#Installs kernel headers to $HEADERS_FOLDER
-install_headers() {
-  # Create an archive containing headers to build out of tree modules
-  # Taken from the archlinux linux PKGBUILD
-  cd $KERNEL_SOURCE_FOLDER
-
-  # Create empty headers folder
-  sudo rm -rf $HEADERS_FOLDER
-  mkdir $HEADERS_FOLDER
-
-  HDR_PATH=$HEADERS_FOLDER/linux-headers-$KVER
-
-  # Build files
-  install -Dt "$HDR_PATH" -m644 .config Makefile Module.symvers System.map # vmlinux
-  install -Dt "$HDR_PATH/kernel" -m644 kernel/Makefile
-  install -Dt "$HDR_PATH/arch/x86" -m644 arch/x86/Makefile
-  cp -t "$HDR_PATH" -a scripts
-
-  # Fixes errors when building
-  install -Dt "$HDR_PATH/tools/objtool" tools/objtool/objtool
-  # install -Dt "$HDR_PATH/tools/bpf/resolve_btfids" tools/bpf/resolve_btfids/resolve_btfids # Disabled in kconfig
-
-  # Install header files
-  cp -t "$HDR_PATH" -a include
-  cp -t "$HDR_PATH/arch/x86" -a arch/x86/include
-  install -Dt "$HDR_PATH/arch/x86/kernel" -m644 arch/x86/kernel/asm-offsets.s
-  install -Dt "$HDR_PATH/drivers/md" -m644 drivers/md/*.h
-  install -Dt "$HDR_PATH/net/mac80211" -m644 net/mac80211/*.h
-  install -Dt "$HDR_PATH/drivers/media/i2c" -m644 drivers/media/i2c/msp3400-driver.h
-  install -Dt "$HDR_PATH/drivers/media/usb/dvb-usb" -m644 drivers/media/usb/dvb-usb/*.h
-  install -Dt "$HDR_PATH/drivers/media/dvb-frontends" -m644 drivers/media/dvb-frontends/*.h
-  install -Dt "$HDR_PATH/drivers/media/tuners" -m644 drivers/media/tuners/*.h
-  install -Dt "$HDR_PATH/drivers/iio/common/hid-sensors" -m644 drivers/iio/common/hid-sensors/*.h
-
-  # Install kconfig files
-  find . -name 'Kconfig*' -exec install -Dm644 {} "$HDR_PATH/{}" \;
-
-  # Remove uneeded architectures
-  for arch in "$HDR_PATH"/arch/*/; do
-    [[ $arch = */x86/ ]] && continue
-    rm -rf "$arch"
-  done
-
-  # Remove broken symlinks
-  find -L "$HDR_PATH" -type l -printf 'Removing %P\n' -delete
-
-  # Strip files
-  find "$HDR_PATH" -type f -exec strip {} \;
-
-  # Strip vmlinux
-  # strip "$HDR_PATH/vmlinux"
-
-  # Remove duplicate folder
-  rm -rf "$HDR_PATH"/hdr
-
-  # Create an archive for the headers
-  cd "$HDR_PATH"/..
-  tar -cvI "xz -9 -T0" -f $BUILD_ROOT_DIRECTORY/headers.tar.xz *
-  write_output "Header archive created!" "blue"
-  echo -e "\n"
-
-}
-
-#launches kernel config graphical editor
+# Launches kernel config graphical editor
+# return 1 if something changes 0 else
 edit_kernel_config() {
+  cd $KSF
 
-  cd $KERNEL_SOURCE_FOLDER
+  cp .config .config-temp
   make menuconfig
+  if [[ $(diff .config .config-temp) ]];then
+    rm .config-temp
+    return 1
+  else
+    rm .config-temp
+    return 0
+  fi
 }
 
-#uses dracut to generate initramfs
 create_initramfs() {
-  cd $BUILD_ROOT_DIRECTORY
-
-  write_output "Building initramfs" "blue"
-  echo -e "\n"
-  # Generate initramfs from the built modules
+  cd $BRD
   
-  sudo bash mkinitramfs.sh
+  if [[ $(id -u) -ne 0 ]]; then
+    error "This Function shouldn't be run as root"
+    exit 1
+  fi
 
-  # copy initramfs to build root for the GitHub release
-  cp $INITRAMFS_NAME $KERNEL_SOURCE_FOLDER/$INITRAMFS_NAME
-  write_output "Building kernel with initramfs" "blue"
-  echo -e "\n"
-  build_kernel 0
-  echo -e "\n"
+  infop "Building initramfs"
+  # Generate initramfs from the built modules
+  sudo bash mkinitramfs.sh
+  cp $INITRAMFS_NAME $KSF
 }
 
 #Gets required input from user to run the kernel build.
 user_input() {
+  cd $BRD
 
-  write_output "Would you like to make edits to the kernel config? (y/n): " "green"
+  ask "Would you like to make edits to the kernel config? [y/N]: "
   read -n 1 -r -s response
   echo $response
   echo -e "\n"
@@ -266,37 +169,39 @@ user_input() {
     edit_kernel_config
   fi
 
-  write_output "Do you want to perform a clean build?\nThis will generate a new build from the ground up, \nrather than using the previous build. (y/n): " "green"
+  ask "Do you want to perform a clean build?\nThis will generate a new build from the ground up, \nrather than using the previous build. [y/N]: "
   read -n 1 -r -s response
   echo $response
   echo -e "\n"
   if [[ $response =~ ^[Yy]$ ]]; then
-    build_kernel 1
+    build_kernel clean
   else
-    build_kernel 0
+    build_kernel
   fi
 
 }
 
-#get_kernel_source
-cp $BUILD_ROOT_DIRECTORY/kernel.conf $KERNEL_SOURCE_FOLDER/.config
-apply_kernel_patches
+sudo infop "Grant sudo access !"
+
+get_kernel_source
+
 setup_kernel_config
 
 # Check if running in a terminal and not in a docker container
 if [[ -t 0 ]] && [[ ! -f /.dockerenv ]]; then
   user_input
 else
-  build_kernel 0
+  build_kernel
 fi
 
-install_modules
-#install_headers
+sudo install_modules
+
 create_initramfs
 
+infop "Building kernel with initramfs"
+build_kernel
+
 # Copy kernel to root
-write_output "Copying kernel to root." "blue"
-echo -e "\n"
+infop "Copying kernel to root."
 cp $KERNEL_SOURCE_FOLDER/arch/x86/boot/bzImage $BUILD_ROOT_DIRECTORY/bzImage
-write_output "Build complete!" "blue"
-echo -e "\n"
+infop "Build complete!"
