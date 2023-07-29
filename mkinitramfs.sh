@@ -4,9 +4,23 @@ BUILD_PATH=$(pwd)
 INITRAMFS_PATH=$BUILD_PATH/initramfs
 INIT_SCRIPT=$BUILD_PATH/init
 MODULES=$BUILD_PATH/modules.tar.xz
-CPIO_ARCHIVE=$INITRAMFS_PATH/initramfs.cpio
+CPIO_ARCHIVE=$BUILD_PATH/initramfs.cpio.xz
+#ALPINE vars as ALP
+ALP_ARCHIVE=alpine-minirootfs-3.18.2-x86_64.tar.gz
+ALP_URL=https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/$ALP_ARCHIVE
+ALP_UNUSED_APK="ca-certificates alpine-keys apk-tools"
+PATH="/bin:/sbin"
 
+CHROOT="chroot $INITRAMFS_PATH"
+
+# Exit on errors
+set -e
+
+source functions.sh
+
+infop "Make clean image"
 # make a clean image
+umount -Rl $INITRAMFS_PATH/* || /bin/true
 rm -rf $INITRAMFS_PATH
 mkdir $INITRAMFS_PATH
 
@@ -22,21 +36,55 @@ basic_root () {
   mkdir --parents ./{local,state,share,src}
   for dir in bin lib lib64 sbin
   do
-    ln -s ../$dir
+    ln -s ../$dir $dir
   done
+  cd ..
   
   # extract modules to /lib/modules
   mkdir ./lib/modules
-  cd usr; ln -s ../lib; cd .. # au cas où
   tar xpf $MODULES -C lib/modules
 }
+
+downtract_alpine () {
+  cd $BUILD_PATH
+
+  infop "Downloading alpine minimal rootfs"
+  if [[ ! -d $ALP_ARCHIVE ]] ; then
+    if ! curl -LO $ALP_URL ; then
+      error "Failed to download using curl, check you own curl, check network connection."
+      exit 1
+    fi
+  else
+    warning "Alpine rootfs already downloaded"
+  fi
+
+  if ! tar -xhf $ALP_ARCHIVE -C $INITRAMFS_PATH; then
+    error "Failed to extract kernel"
+    exit 1
+  fi
+}
+
+
+alp_manage_apk () {
+  cd $INITRAMFS_PATH
+  
+  infop "Set up internet access"
+  cp /etc/resolv.conf ./etc/resolv.conf
+  
+  infop "Add apks"
+  $CHROOT apk update
+  $CHROOT apk add bash
+  
+  infop "Cleaning unused apk"
+  $CHROOT apk del ca-certificates alpine-keys apk-tools
+}
+
 
 
 # extract firmware blob needed
 extract_blobs () {
   cd $INITRAMFS_PATH
-
-  mkdir ./lib/firmware
+  
   cp -r /lib/firmware/amdgpu ./lib/firmware
 }
 
@@ -50,14 +98,16 @@ install_scripts () {
 
 # compile cpio archive
 compile_cpio () {
-  cd $INITRAMFS_PATH 
+  cd $INITRAMFS_PATH
 
-  rm $CPIO_ARCHIVE
-  find . | cpio -ov --format=newc > $CPIO_ARCHIVE
+  rm -f $CPIO_ARCHIVE
+  find .  | cpio -ov --format=newc | xz --check=crc32 --lzma2=dict=512KiB -ze -9 -T$(nproc) > $CPIO_ARCHIVE
 
 }
 
 basic_root
+downtract_alpine
+alp_manage_apk
 extract_blobs
 install_scripts
 compile_cpio
