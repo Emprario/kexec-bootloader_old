@@ -29,20 +29,15 @@ error () { # critical error -> script will exit
 }
 
 
-#    ### Guidlines ###
-# * Each function should use cd to point the directory it supposed to be.
-
-
-
-
-
 
 #Checks if source files already exist
 #If not then tries to download tarball with curl
 #if curl fails then tries with wget
 #if download is successful then extracts tarball
 get_kernel_source() {
-  if [[ ! -d $KERNEL_SOURCE_FOLDER ]]; then
+  cd $BRD
+
+  if [[ ! -d $KSF ]]; then
     infop "Downloading kernel source"
     echo -e "\n"
     if ! curl $KERNEL_SOURCE_URL -o $KERNEL_SOURCE_NAME.tar.xz; then
@@ -55,7 +50,7 @@ get_kernel_source() {
     fi
 
   else
-    warning "Kernel already cloned!"
+    warning "Kernel already Download!"
   fi
 }
 
@@ -103,24 +98,21 @@ build_kernel() {
 install_modules() {
   cd $KSF
 
-  if [  if [[ $(id -u) -eq 0 ]]; then
-    error "This Function should be run as root"
-    exit 1
-  fi[ $(id -u) -eq 0 ]]; then
-    error "This Function should be run as root"
-    exit 1
-  fi
+  #if [  if [[ $(id -u) -eq 0 ]]; then
+  #  error "This Function should be run as root"
+  #  exit 1
+  #fi
 
   # Create empty module folder
-  rm -rf $MODULES_FOLDER
+  sudo rm -rf $MODULES_FOLDER
   mkdir $MODULES_FOLDER
 
-  make -j"$(nproc)" modules_install INSTALL_MOD_PATH=$MODULES_FOLDER INSTALL_MOD_STRIP=1
+  sudo make -j"$(nproc)" modules_install INSTALL_MOD_PATH=$MODULES_FOLDER INSTALL_MOD_STRIP=1
 
   cd $MODULES_FOLDER/lib/modules
   # Remove broken symlinks
-  rm -rf */build
-  rm -rf */source
+  sudo rm -rf */build
+  sudo rm -rf */source
 
   # Create an archive for the modules
   tar -cvI "xz -9 -T0" -f $BRD/modules.tar.xz *
@@ -136,20 +128,20 @@ edit_kernel_config() {
   make menuconfig
   if [[ $(diff .config .config-temp) ]];then
     rm .config-temp
-    return 1
+    DIFF=1
   else
     rm .config-temp
-    return 0
+    DIFF=0
   fi
 }
 
 create_initramfs() {
   cd $BRD
   
-  if [[ $(id -u) -ne 0 ]]; then
-    error "This Function shouldn't be run as root"
-    exit 1
-  fi
+  #if [[ $(id -u) -eq 0 ]]; then
+  #  error "This Function shouldn't be run as root"
+  #  exit 1
+  #fi
 
   infop "Building initramfs"
   # Generate initramfs from the built modules
@@ -176,12 +168,23 @@ user_input() {
   if [[ $response =~ ^[Yy]$ ]]; then
     build_kernel clean
   else
-    build_kernel
+    if [[ $DIFF -eq 1 ]];then
+      build_kernel
+      install_modules
+    fi
   fi
 
 }
 
-sudo infop "Grant sudo access !"
+save_config () {
+  cd $KSF
+  
+  infop "save kenrel configuration"
+  cp .config $BRD
+}
+
+
+sudo echo "Grant sudo access !"
 
 get_kernel_source
 
@@ -194,14 +197,14 @@ else
   build_kernel
 fi
 
-sudo install_modules
-
 create_initramfs
 
 infop "Building kernel with initramfs"
 build_kernel
 
+save_config
+
 # Copy kernel to root
 infop "Copying kernel to root."
-cp $KERNEL_SOURCE_FOLDER/arch/x86/boot/bzImage $BUILD_ROOT_DIRECTORY/bzImage
+cp $KSF/arch/x86/boot/bzImage $BRD/bzImage
 infop "Build complete!"
