@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 if [ -d "/lib/scripts/" ];then
@@ -8,14 +8,15 @@ else
 fi
 
 # '.' is equivalent to the good old 'source' in bash
-. $srcPATH/print_menue.sh
-. $srcPATH/scan_boot.sh
+source $srcPATH/print_menue.sh
+source $srcPATH/scan_boot.sh
 
 get_scan # return $OPTIONS
 
 OPTIONS_useNAME=""
-for option in $OPTIONS
+for option in ${OPTIONS[@]}
 do
   OPTIONS_useNAME="$(echo $option | cut -f4 -d"/")_on_/dev/$(echo $option | cut -f3 -d"/") $OPTIONS_useNAME"
 done
 selection "Selection:" "$OPTIONS_useNAME"
+echo $SEL

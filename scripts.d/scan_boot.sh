@@ -1,51 +1,30 @@
-#!/bin/sh
-
-idx_array () {
-  # $1 is the array and $2 is the idx
-  cc=0
-  for e in $1; 
-  do
-    if [ $cc -eq $2 ];then
-      echo "$e"
-      exit
-    fi
-    cc=$(( $cc+1 ))
-  done
-}
-
-len_array () {
-  cc=0
-  for e in $1;
-  do
-    cc=$(( $cc+1 ))
-  done
-  echo $cc
-}
+#!/bin/bash
 
 get_scan () {
   #### Find bootable drives ####
   echo "Finding bootable drives ..."
 
-  DRIVES=$(blkid | grep "BOOT" | tr "\n" ' ' | tr ':' ' ')
-  
-  # Separate Drives lines to only keep drive name
-  DRIVES_NAME=""
-  for drive in $DRIVES;
+  DRIVES=($(lsblk -ro NAME,LABEL | grep KC-BOOT))
+  DRIVES_NAME=()
+  for drive in ${DRIVES[@]}
   do
-    if [ -n "$(ls -l $drive 2>/dev/null)" ];then # supress error output
-      DRIVES_NAME="$(echo "$drive" | cut -c6-) $DRIVES_NAME"
+    if [[ $drive != "KC-BOOT" ]]; then
+      DRIVES_NAME+=($drive)
     fi
   done
+  
 
-  echo "Boot partitions found: $(len_array "$DRIVES_NAME")"
+
+  echo "Boot partitions found: ${#DRIVES_NAMES[@]}"
+  
 
   #### Mount and search for kernels ####
   echo "Mounting and looking for kernels ..."
 
-  OPTIONS=""
-  for drive in $DRIVES_NAME;
-  do 
-    #drive=$(echo $drive | sed 's/ //g')
+  OPTIONS=()
+  echo ${DRIVES_NAME[2]}
+  for drive in ${DRIVES_NAME[@]};
+  do
     mkdir -p /mnt/$drive
     mount /dev/$drive /mnt/$drive
     cd /mnt/$drive  
@@ -55,13 +34,13 @@ get_scan () {
       if   [ -f $folder/bzImage ] \
         && [ -f $folder/kernel.flags ] \
         && [ -f $folder/initrd ]; then 
-        OPTIONS="$folder $OPTIONS"
+        OPTIONS+=($folder)
       fi
     done
     cd /
     umount /dev/$drive
   done
-  echo "Options detected: $(len_array "$OPTIONS")"
+  echo "Options detected: ${#OPTIONS[@]}"
 }
 
 #get_scan

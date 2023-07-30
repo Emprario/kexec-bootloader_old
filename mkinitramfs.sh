@@ -9,6 +9,8 @@ CPIO_ARCHIVE=$BUILD_PATH/initramfs.cpio.xz
 ALP_ARCHIVE=alpine-minirootfs-3.18.2-x86_64.tar.gz
 ALP_URL=https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/$ALP_ARCHIVE
 ALP_UNUSED_APK="ca-certificates alpine-keys apk-tools"
+ALP_USEFUL_APK="bash util-linux"
+ALP_EDGETE_APK="kexec-tools"
 PATH="/bin:/sbin"
 
 CHROOT="chroot $INITRAMFS_PATH"
@@ -73,10 +75,11 @@ alp_manage_apk () {
   
   infop "Add apks"
   $CHROOT apk update
-  $CHROOT apk add bash
+  $CHROOT apk add $ALP_USEFUL_APK
+  $CHROOT apk add $ALP_EDGETE_APK --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
   
   infop "Cleaning unused apk"
-  $CHROOT apk del ca-certificates alpine-keys apk-tools
+  $CHROOT apk del $ALP_UNUSED_APK
 }
 
 

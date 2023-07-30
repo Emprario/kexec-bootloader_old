@@ -7,7 +7,7 @@ BRD=$(pwd) # BUILD_ROOT_DIRECTORY
 KSF=$BRD/linux-$KERNEL_VERSION # KERNEL_SOURCE_FOLDER
 MODULES_FOLDER=$KSF/modules
 KERNEL_CONFIG=$BRD/kernel.conf
-INITRAMFS_NAME=initramfs.cpio
+INITRAMFS_NAME=initramfs.cpio.xz
 
 # Exit on errors
 set -e
@@ -152,10 +152,9 @@ user_input() {
   if [[ $response =~ ^[Yy]$ ]]; then
     build_kernel clean
   else
-    if [[ $DIFF -eq 1 ]];then
-      build_kernel
-      install_modules
-    fi
+    #if [[ $DIFF -eq 1 ]];then
+    build_kernel
+    #install_modules
   fi
 
 }
@@ -170,6 +169,8 @@ save_config () {
 
 sudo echo "Grant sudo access !"
 
+create_initramfs
+
 get_kernel_source
 
 setup_kernel_config
@@ -181,10 +182,9 @@ else
   build_kernel
 fi
 
-create_initramfs
 
-infop "Building kernel with initramfs"
-build_kernel
+#infop "Building kernel with initramfs"
+#build_kernel
 
 save_config
 

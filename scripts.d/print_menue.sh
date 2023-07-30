@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 read_key () {
   # Read a single character from the keyboard
@@ -18,7 +18,7 @@ read_key () {
   esac
   echo "$OP"
 }
-: 
+
 selection () {
   # With $1 as the en-tete and $2 the options 
   clear
@@ -53,8 +53,7 @@ selection () {
       SEL=$(( $cc-1 ))
     fi
   done
-  return $SEL
 }
 
 #selection "Bonjour !" "eupnea kboot"
-#echo "return value: $?"
+#echo "return value: $SEL"

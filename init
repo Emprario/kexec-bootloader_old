@@ -1,4 +1,4 @@
-#!/bin/busybox sh
+#!/bin/bash
 
 echo "Mount base fs"
 mount -t proc none /proc
@@ -12,4 +12,4 @@ echo "Execute origin script"
 /lib/scripts/origin
 
 # Fallback into shell
-sh
+bash
