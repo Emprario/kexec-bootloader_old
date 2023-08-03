@@ -31,9 +31,8 @@ get_scan () {
     for folder in "/mnt/$drive"/*;
     do
       echo "Scanning: $folder"
-      if   [ -f $folder/bzImage ] \
-        && [ -f $folder/kernel.flags ] \
-        && [ -f $folder/initrd ]; then 
+      if   [ -f $folder/vmlinuz ] \
+        && [ -f $folder/kernel.flags ]; then
         OPTIONS+=($folder)
       fi
     done

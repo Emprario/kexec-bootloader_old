@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ -f /etc/devmode ];then
+  export DEVMODE="open"
+fi
+
+
 echo "Mount base fs"
 mount -t proc none /proc
 mount -t sysfs none /sys

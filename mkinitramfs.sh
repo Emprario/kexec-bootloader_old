@@ -11,7 +11,9 @@ ALP_URL=https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/$ALP_ARCHIVE
 ALP_UNUSED_APK="ca-certificates alpine-keys apk-tools"
 ALP_USEFUL_APK="bash util-linux"
 ALP_EDGETE_APK="kexec-tools"
-PATH="/bin:/sbin"
+ALP_DEVELP_APK="vim nano tree"
+ALP_COMDEV_APK="vboot-utils cgpt"
+PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
 CHROOT="chroot $INITRAMFS_PATH"
 
@@ -20,31 +22,38 @@ set -e
 
 source functions.sh
 
-infop "Make clean image"
-# make a clean image
-umount -Rl $INITRAMFS_PATH/* || /bin/true
-rm -rf $INITRAMFS_PATH
-mkdir $INITRAMFS_PATH
+clean () {
 
+  infop "Make clean image"
+  # make a clean image
+  umount -Rl $INITRAMFS_PATH/* || /bin/true
+  rm -rf $INITRAMFS_PATH
+  mkdir $INITRAMFS_PATH
+}
 # Create basic root
 basic_root () {
   cd $INITRAMFS_PATH
   
-  mkdir --parents ./{usr,bin,dev,etc,lib,lib64,mnt/root,proc,root,sbin,sys,tmp}
+  mkdir --parents ./{usr,bin,dev,etc,lib,mnt/root,proc,root,sbin,sys,tmp}
+  mknod -m 622 dev/console c 5 1
+  mknod -m 622 dev/tty0 c 4 1
+  mknod -m 622 dev/ttyS0 c 4 64
   cp $INIT_SCRIPT .
   
   # Make usr looks like root
   cd $INITRAMFS_PATH/usr
-  mkdir --parents ./{local,state,share,src}
-  for dir in bin lib lib64 sbin
-  do
-    ln -s ../$dir $dir
-  done
+  mkdir --parents ./{local,state,share,src,bin,sbin,lib}
   cd ..
   
-  # extract modules to /lib/modules
-  mkdir ./lib/modules
-  tar xpf $MODULES -C lib/modules
+  if [[ $DEVMODE == "open" ]];then
+    # extract modules to /lib/modules
+    mkdir ./lib/modules
+    tar xpf $MODULES -C lib/modules
+    
+    # enable devmode in initramfs
+    touch /etc/devmode
+  fi
+  
 }
 
 downtract_alpine () {
@@ -78,8 +87,14 @@ alp_manage_apk () {
   $CHROOT apk add $ALP_USEFUL_APK
   $CHROOT apk add $ALP_EDGETE_APK --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
   
-  infop "Cleaning unused apk"
-  $CHROOT apk del $ALP_UNUSED_APK
+  if [[ $DEVAPK == "install" ]];then
+    infop "Installing extra apks"
+    $CHROOT apk add $ALP_DEVELP_APK
+    $CHROOT apk add $ALP_COMEDV_APK --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
+  else
+    infop "Cleaning unused apks"
+    $CHROOT apk del $ALP_UNUSED_APK
+  fi
 }
 
 
@@ -108,6 +123,19 @@ compile_cpio () {
 
 }
 
+for opt in $@
+do
+  case $opt in
+    devapk)
+      DEVAPK="install"
+      ;;
+    devmode)
+      DEVMODE="open"
+      ;;
+  esac
+done
+
+clean
 basic_root
 downtract_alpine
 alp_manage_apk

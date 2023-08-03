@@ -14,6 +14,24 @@ set -e
 
 source functions.sh
 
+usage() {
+
+   # Display Help
+   echo "Set of functions to build a working bootloader."
+   echo
+   echo "Syntax: ./build.sh [-h|s] [TARGET...]"
+   echo "options:"
+   echo "-h     Print this Help."
+   echo "-s     No input will be ask"
+   echo
+   echo "   TARGETs can combined (and separated by a comma), "
+   echo "          here the list: clean,config,devapk,devmode"
+   echo
+}
+
+
+
+
 #Checks if source files already exist
 #If not then tries to download tarball with curl
 #if curl fails then tries with wget
@@ -64,6 +82,7 @@ build_kernel() {
   
   if [[ $1 == "clean" ]]; then
     infop "Clean Kernel source"
+    sudo rm -rf ./modules
     make clean
   fi
   
@@ -129,7 +148,7 @@ create_initramfs() {
 
   infop "Building initramfs"
   # Generate initramfs from the built modules
-  sudo bash mkinitramfs.sh
+  sudo bash mkinitramfs.sh $MKINIT
   cp $INITRAMFS_NAME $KSF
 }
 
@@ -167,28 +186,55 @@ save_config () {
 }
 
 
-sudo echo "Grant sudo access !"
+main () {
 
-create_initramfs
+  sudo echo "Grant sudo access !"
 
-get_kernel_source
+  create_initramfs 
 
-setup_kernel_config
+  get_kernel_source
 
-# Check if running in a terminal and not in a docker container
-if [[ -t 0 ]] && [[ ! -f /.dockerenv ]]; then
-  user_input
-else
-  build_kernel
-fi
+  setup_kernel_config
+
+  # Check if running in a terminal and not in a docker container
+  if [[ -t 0 ]] && [[ ! -f /.dockerenv ]]; then
+    user_input
+  else
+    build_kernel
+  fi
 
 
-#infop "Building kernel with initramfs"
-#build_kernel
+  #infop "Building kernel with initramfs"
+  #build_kernel
 
-save_config
+  save_config
 
-# Copy kernel to root
-infop "Copying kernel to root."
-cp $KSF/arch/x86/boot/bzImage $BRD/bzImage
-infop "Build complete!"
+  # Copy kernel to root
+  infop "Copying kernel to root."
+  cp $KSF/arch/x86/boot/bzImage $BRD/bzImage
+  infop "Build complete!"
+}
+
+INPUT=1
+MKINIT=()
+
+for opt in $@
+do
+  case $opt in
+    -h)
+      usage
+      exit 0
+      ;;
+    -s)
+      INPUT=0
+      ;;
+    devmode)
+      MKINIT+=("devmode")
+      ;;
+    devapk)
+      MKINIT+=("devapk")
+      ;;
+  esac
+done
+
+main

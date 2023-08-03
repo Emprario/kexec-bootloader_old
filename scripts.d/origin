@@ -11,12 +11,49 @@ fi
 source $srcPATH/print_menue.sh
 source $srcPATH/scan_boot.sh
 
-get_scan # return $OPTIONS
+OPTIONS=()
+cc=0
+while [ ${#OPTIONS[@]} -eq 0 ] && [ $cc -lt 15 ];
+do
+  echo ${OPTIONS[@]}
+  get_scan # return $OPTIONS
+  cc=$(($cc+1))
+  sleep 1
+done
 
-OPTIONS_useNAME=""
+OPTIONS_useNAME=()
 for option in ${OPTIONS[@]}
 do
-  OPTIONS_useNAME="$(echo $option | cut -f4 -d"/")_on_/dev/$(echo $option | cut -f3 -d"/") $OPTIONS_useNAME"
+  OPTIONS_useNAME+=("$(echo $option | cut -f4 -d"/")_on_/dev/$(echo $option | cut -f3 -d"/")")
 done
-selection "Selection:" "$OPTIONS_useNAME"
-echo $SEL
+selection "Selection:" $OPTIONS_useNAME
+
+DRIVE=$(echo ${OPTIONS[$SEL]} | cut -f3 -d"/")
+mount /dev/$DRIVE /mnt/$DRIVE
+
+CMDLINE=$(cat ${OPTIONS[$SEL]}/kernel.flags)
+VMLINUZ=${OPTIONS[$SEL]}/vmlinuz
+if [ -f ${OPTIONS[$SEL]}/initrd ];then
+  INITRD=${OPTIONS[$SEL]}/initrd
+else
+  INITRD="noinitrd"
+fi
+
+KEXEC_ARGS="--reset-vga --console-vga --console-serial"
+
+if [[ $INITRD == "noinitrd" ]]; then
+  EXEC="kexec -l $VMLINUZ --command-line=$CMDLINE " #$KEXEC_ARGS
+else
+  EXEC="kexec -l $VMLINUZ --initrd=$INITRD --command-line=$CMDLINE " #$KEXEC_ARGS
+fi
+
+if [[ $DEVMODE == "open" ]];then
+  echo $EXEC
+  export $EXEC
+  echo $KEXEC_ARGS
+  export $KEXEC_ARGS
+  bash
+else
+  $EXEC $KEXEC_ARGS
+  kexec -e
+fi

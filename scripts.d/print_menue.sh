@@ -31,11 +31,12 @@ selection () {
       clear
       cc=0
       echo "$1"
-      for option in $2; do
+      PR="$2"
+      for option in ${PR[@]}; do
         if [ $cc -eq $SEL ];then
-          echo " * $option"
+          echo " * $( echo $option | tr "_" " ")"
         else
-          echo "   $option"
+          echo "   $( echo $option | tr "_" " ")"
         fi
         cc=$(( $cc+1 ))
       done
